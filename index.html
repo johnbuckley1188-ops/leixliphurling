@@ -3389,16 +3389,28 @@ async function dropboxImportPaths(paths){
       });
       if(!r.ok){results.push({fname,status:'err',msg:'Download failed (HTTP '+r.status+')'});continue;}
       const text=await r.text();
-      console.log('[DBX DL] '+fname+' — first 300 chars:', text.substring(0,300));
-      // Detect if Dropbox returned an error JSON instead of file content
       const trimmed=text.trimStart();
+      const preview=text.substring(0,120).replace(/[\r\n]/g,' ');
+      console.log('[DBX DL] '+fname+' len='+text.length+' preview='+preview);
+      // Detect JSON error response (scope issue)
       if(trimmed.startsWith('{')||trimmed.startsWith('[')){
-        let errMsg='Download returned JSON (not XML) — token may be missing files.content.read scope';
-        try{const j=JSON.parse(trimmed);if(j.error_summary||j.error)errMsg='Dropbox error: '+(j.error_summary||j.error);}catch(e){}
+        let errMsg='Dropbox returned JSON, not file content (len='+text.length+'): '+preview;
+        try{const j=JSON.parse(trimmed);if(j.error_summary)errMsg='Dropbox error: '+j.error_summary;}catch(e){}
         results.push({fname,status:'err',msg:errMsg});continue;
       }
+      // Check for XML parse error
+      if(!trimmed.startsWith('<')){
+        results.push({fname,status:'err',msg:'Unexpected response (len='+text.length+'): '+preview});continue;
+      }
       const rows=parseFile(text,fname);
-      if(!rows.length){results.push({fname,status:'warn',msg:'No data found in file'});continue;}
+      // If XML parsed but got 0 rows, show parse error info
+      if(!rows.length){
+        let doc2;try{doc2=new DOMParser().parseFromString(text,'text/xml');}catch(e){}
+        const parseErr=doc2&&doc2.querySelector('parsererror');
+        const instCount=doc2?doc2.querySelectorAll('instance').length:0;
+        const rootTag=doc2&&doc2.documentElement?doc2.documentElement.tagName:'?';
+        results.push({fname,status:'warn',msg:'No data — root=<'+rootTag+'> instances='+instCount+(parseErr?' PARSE_ERROR':'')});continue;
+      }
       const now=Date.now();
       const existing=games.findIndex(g=>g.name===fname);
       if(existing>=0)games[existing]={name:fname,rows,uploadedAt:games[existing].uploadedAt||now};
