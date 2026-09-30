@@ -3389,6 +3389,14 @@ async function dropboxImportPaths(paths){
       });
       if(!r.ok){results.push({fname,status:'err',msg:'Download failed (HTTP '+r.status+')'});continue;}
       const text=await r.text();
+      console.log('[DBX DL] '+fname+' — first 300 chars:', text.substring(0,300));
+      // Detect if Dropbox returned an error JSON instead of file content
+      const trimmed=text.trimStart();
+      if(trimmed.startsWith('{')||trimmed.startsWith('[')){
+        let errMsg='Download returned JSON (not XML) — token may be missing files.content.read scope';
+        try{const j=JSON.parse(trimmed);if(j.error_summary||j.error)errMsg='Dropbox error: '+(j.error_summary||j.error);}catch(e){}
+        results.push({fname,status:'err',msg:errMsg});continue;
+      }
       const rows=parseFile(text,fname);
       if(!rows.length){results.push({fname,status:'warn',msg:'No data found in file'});continue;}
       const now=Date.now();
@@ -3579,11 +3587,8 @@ async function lxInit(){
           name=data.name||name;
           await FIRESTORE.doc(`users/${user.uid}`).update({lastLogin:new Date().toISOString()});
         }else{
-          // First login — check if any admin exists; if not, make this user admin
-          try{
-            const adminSnap=await FIRESTORE.collection('users').where('role','==','admin').limit(1).get();
-            if(!adminSnap||adminSnap.empty)role='admin';
-          }catch(e){role='viewer';}
+          // First user to log in becomes admin automatically
+          role='admin';
           await FIRESTORE.doc(`users/${user.uid}`).set({
             email:user.email,name,role,
             createdAt:new Date().toISOString(),
