@@ -3280,15 +3280,9 @@ async function doGoogleLogin(){
   err.textContent='';
   try{
     const provider=new firebase.auth.GoogleAuthProvider();
-    await AUTH.signInWithPopup(provider);
+    await AUTH.signInWithRedirect(provider);
   }catch(e){
-    if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
-      // user closed popup — no message needed
-    }else if(e.code==='auth/popup-blocked'){
-      err.textContent='Popup blocked — please allow popups for this site';
-    }else{
-      err.textContent='Google sign-in failed — please try again';
-    }
+    err.textContent='Google sign-in failed — please try again';
   }
 }
 
@@ -3706,6 +3700,9 @@ async function lxInit(){
     if(loading)loading.innerHTML='<div style="color:#E07070;font-size:13px;font-family:Barlow,sans-serif;text-align:center;padding:20px">Unable to connect.<br>Please refresh.</div>';
     return;
   }
+
+  // Handle redirect result from Google Sign-In
+  AUTH.getRedirectResult().catch(()=>{});
 
   AUTH.onAuthStateChanged(async(user)=>{
     if(user){
