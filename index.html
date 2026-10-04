@@ -405,9 +405,100 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .adm-confirm span{color:#E07070;font-size:12px;font-family:'Barlow',sans-serif;flex:1}
 .adm-empty{color:#3A5070;font-size:12px;text-align:center;padding:16px 0;font-family:'Barlow',sans-serif}
 </style>
-<style>:root{--accent:#C23850;--accent-rgb:194,56,80;--sb-bg:#FFFFFF;--sb-accent-dim:rgba(0,0,0,.06);}</style>
+<style>:root{--accent:#D4A820;--accent-rgb:212,168,32;--sb-bg:#FFFFFF;--sb-accent-dim:rgba(0,0,0,.06);}</style>
+<style>
+/* ── LIGHT THEME OVERRIDES ─────────────────────────────────────────── */
+html[data-theme="light"] body{background:#F5F7FA;color:#1A2030}
+html[data-theme="light"] body::before{background-image:radial-gradient(circle,rgba(0,0,0,.055) 1px,transparent 1px)}
+html[data-theme="light"] body::after{background:none}
+/* Columns */
+html[data-theme="light"] .three-col{background:#E8ECF2;border-top-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .col-block{background:#FFFFFF}
+html[data-theme="light"] .col-block::-webkit-scrollbar-track{background:rgba(0,0,0,.04)}
+html[data-theme="light"] .col-block::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:3px}
+html[data-theme="light"] .col-hd{background:#EDF0F7;color:#1A2030;border-bottom-color:rgba(0,0,0,.08)}
+/* Team switcher */
+html[data-theme="light"] .team-switcher{background:#EDF0F7;border-bottom-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .tsw-btn{color:#6B7280}
+html[data-theme="light"] .tsw-btn.active{color:#1A2030;border-bottom-color:#1A2030}
+/* Match banner */
+html[data-theme="light"] .match-banner{background:#EDF0F7}
+html[data-theme="light"] .mb-name{color:#1A2030}
+html[data-theme="light"] .mb-gp-val{color:#1A2030}
+html[data-theme="light"] .mb-gp-lbl{color:#6B7280}
+html[data-theme="light"] .mb-total{color:#1A2030}
+html[data-theme="light"] .mb-vsep{color:#9CA3AF}
+html[data-theme="light"] .mb-page-title{color:#1A2030}
+html[data-theme="light"] .mb-title-block{border-left-color:rgba(0,0,0,.12)}
+/* Compare rows */
+html[data-theme="light"] .cmp-section-title{background:#EDF0F7;color:#1A2030;border-color:rgba(0,0,0,.1)}
+html[data-theme="light"] .cmp-row{border-bottom-color:rgba(0,0,0,.05)}
+html[data-theme="light"] .cmp-l,html[data-theme="light"] .cmp-r{color:#1A2030}
+html[data-theme="light"] .cmp-m{color:#6B7280}
+html[data-theme="light"] .cmp-poss-wrap{border-bottom-color:rgba(0,0,0,.06)}
+/* Sport toggle */
+html[data-theme="light"] .sport-toggle{background:#E8ECF2;border-color:rgba(0,0,0,.15)}
+html[data-theme="light"] .sport-btn{color:#6B7280}
+html[data-theme="light"] .sport-btn.active{color:#1A2030}
+/* Tables */
+html[data-theme="light"] .shot-tbl th{color:#6B7280;border-bottom-color:rgba(0,0,0,.1)}
+html[data-theme="light"] .shot-tbl td{color:#1A2030;border-bottom-color:rgba(0,0,0,.04)}
+html[data-theme="light"] .shot-tbl td.row-lbl{color:#374151}
+html[data-theme="light"] .zone-tbl th{color:#6B7280;border-bottom-color:rgba(0,0,0,.1)}
+html[data-theme="light"] .zone-tbl td{color:#1A2030;border-bottom-color:rgba(0,0,0,.04)}
+html[data-theme="light"] .zone-tbl td:first-child{color:#374151}
+/* Funnel */
+html[data-theme="light"] .funnel{background:#F5F7FA;border-top-color:rgba(0,0,0,.06)}
+html[data-theme="light"] .f-val{color:#1A2030}
+html[data-theme="light"] .f-lbl{color:#6B7280}
+html[data-theme="light"] .f-arr{color:#CBD5E1}
+/* Turnover types */
+html[data-theme="light"] .to-type-v{color:#1A2030}
+html[data-theme="light"] .to-type-l{color:#6B7280}
+/* Donut + PO header */
+html[data-theme="light"] .d-lbl{color:#6B7280}
+html[data-theme="light"] .po-hdr{background:rgba(0,0,0,.03)}
+html[data-theme="light"] .po-hdr-lbl{color:#6B7280}
+html[data-theme="light"] .po-hdr-val{color:#1A2030}
+html[data-theme="light"] .pitch-lbl{color:#6B7280}
+/* Home splash */
+html[data-theme="light"] .home-brand{color:#1A2030}
+html[data-theme="light"] .home-sub{color:rgba(0,0,0,.35)}
+html[data-theme="light"] .home-divider{background:rgba(0,0,0,.12)}
+html[data-theme="light"] .home-club{color:rgba(0,0,0,.35)}
+html[data-theme="light"] .home-cta{color:rgba(0,0,0,.25)}
+/* Trends */
+html[data-theme="light"] .trends-header{background:#EDF0F7;border-bottom-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .trends-header-title{color:#1A2030}
+html[data-theme="light"] .trends-opp-toggle span{color:rgba(0,0,0,.5)}
+html[data-theme="light"] .trends-section-lbl{color:rgba(0,0,0,.4)}
+html[data-theme="light"] .trends-card{background:#FFFFFF;border-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .trends-card-title{color:#1A2030}
+html[data-theme="light"] .trends-empty{color:rgba(0,0,0,.3)}
+/* AI chat */
+html[data-theme="light"] .ai-msg.user .ai-bubble{background:#DBEAFE;color:#1A2030}
+html[data-theme="light"] .ai-msg.assistant .ai-bubble{background:#F5F7FA;border-color:rgba(0,0,0,.1);color:#374151}
+html[data-theme="light"] .ai-bubble.thinking{color:#9CA3AF}
+html[data-theme="light"] .ai-input-row{background:#EDF0F7;border-top-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .ai-input{background:#FFFFFF;border-color:rgba(0,0,0,.2);color:#1A2030}
+html[data-theme="light"] .ai-header{border-bottom-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .ai-header-sub{color:#9CA3AF}
+html[data-theme="light"] .ai-clear-btn{color:#6B7280;border-color:rgba(0,0,0,.15)}
+html[data-theme="light"] .ai-clear-btn:hover{color:#1A2030;border-color:rgba(0,0,0,.3)}
+html[data-theme="light"] .ai-sug-btn{background:#EDF0F7;border-color:rgba(0,0,0,.1);color:#6B7280}
+html[data-theme="light"] .ai-sug-btn:hover{background:#E2E8F0;color:#1A2030}
+html[data-theme="light"] .ai-no-data{color:#9CA3AF}
+/* Misc */
+html[data-theme="light"] .sec-sep{border-top-color:rgba(0,0,0,.06)}
+html[data-theme="light"] .empty h2{color:#374151}
+html[data-theme="light"] .upload-zone{border-color:rgba(0,0,0,.15)}
+html[data-theme="light"] .mobile-nav{background:#EDF0F7;border-top-color:rgba(0,0,0,.08)}
+html[data-theme="light"] .mob-nav-btn{color:#6B7280}
+html[data-theme="light"] .print-hdr{background:#EDF0F7}
+</style>
 </head>
 <body>
+<script>(function(){var t=localStorage.getItem('lx_theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}());</script>
 <!-- AUTH OVERLAY -->
 <div id="auth-overlay">
   <div class="auth-bg-dots"></div>
@@ -600,6 +691,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       </label>
 
       <button class="sb-btn pdf" onclick="exportPDF()">⬇ EXPORT PDF</button>
+      <button id="theme-toggle-btn" class="sb-btn" onclick="toggleTheme()" style="background:rgba(0,0,0,.05);color:#555">☀ LIGHT MODE</button>
     </div>
 
     <div style="padding:6px 8px 2px;border-top:1px solid rgba(0,0,0,.08);margin-top:auto">
@@ -3637,7 +3729,24 @@ async function lxInit(){
   });
 }
 
-window.addEventListener('load',()=>{lxInit();});
+window.addEventListener('load',()=>{lxInit();_applyThemeBtn();});
+
+function toggleTheme(){
+  const html=document.documentElement;
+  const isLight=html.getAttribute('data-theme')==='light';
+  const next=isLight?'dark':'light';
+  if(next==='light'){html.setAttribute('data-theme','light');}
+  else{html.removeAttribute('data-theme');}
+  try{localStorage.setItem('lx_theme',next);}catch(e){}
+  _applyThemeBtn();
+}
+function _applyThemeBtn(){
+  const btn=document.getElementById('theme-toggle-btn');
+  if(!btn)return;
+  const isLight=document.documentElement.getAttribute('data-theme')==='light';
+  btn.textContent=isLight?'🌙 DARK MODE':'☀ LIGHT MODE';
+  btn.style.background=isLight?'rgba(0,0,0,.07)':'rgba(0,0,0,.05)';
+}
 
 
 /* ── ABSOLUTE LAYOUT FIX: measure real heights and set three-col top ── */
