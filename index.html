@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Barlow+Condensed:wght@400;700;800;900&family=Barlow:wght@400;500;600&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -3275,15 +3276,50 @@ async function doLogin(){
   }
 }
 
-async function doGoogleLogin(){
+function doGoogleLogin(){
   const err=document.getElementById('lx-err');
   err.textContent='';
-  try{
-    const provider=new firebase.auth.GoogleAuthProvider();
-    await AUTH.signInWithRedirect(provider);
-  }catch(e){
-    err.textContent='Google sign-in failed — please try again';
+  if(typeof google==='undefined'||!google.accounts){
+    err.textContent='Google Sign-In not ready — please wait a moment and try again.';
+    return;
   }
+  // Try FedCM / One Tap first (works in managed Chrome, no popup needed)
+  google.accounts.id.initialize({
+    client_id:'227872646687-e25n9vf0r8q79kgjkhruh57eslvhlkhm.apps.googleusercontent.com',
+    callback:_handleGoogleIdToken,
+    use_fedcm_for_prompt:true
+  });
+  google.accounts.id.prompt(notification=>{
+    if(notification.isNotDisplayed()||notification.isSkippedMoment()){
+      // FedCM not available — fall back to OAuth token client (may open popup)
+      _googleTokenClientLogin();
+    }
+  });
+}
+async function _handleGoogleIdToken(response){
+  const err=document.getElementById('lx-err');
+  try{
+    const credential=firebase.auth.GoogleAuthProvider.credential(response.credential);
+    await AUTH.signInWithCredential(credential);
+  }catch(e){
+    err.textContent='Sign-in failed: '+(e.code||e.message);
+  }
+}
+function _googleTokenClientLogin(){
+  const err=document.getElementById('lx-err');
+  const client=google.accounts.oauth2.initTokenClient({
+    client_id:'227872646687-e25n9vf0r8q79kgjkhruh57eslvhlkhm.apps.googleusercontent.com',
+    scope:'email profile openid',
+    callback:async response=>{
+      if(response.error){err.textContent='Google error: '+response.error;return;}
+      try{
+        const credential=firebase.auth.GoogleAuthProvider.credential(null,response.access_token);
+        await AUTH.signInWithCredential(credential);
+      }catch(e){err.textContent='Sign-in failed: '+(e.code||e.message);}
+    },
+    error_callback:e=>{err.textContent='Google error: '+(e.type||JSON.stringify(e));}
+  });
+  client.requestAccessToken({prompt:'select_account'});
 }
 
 function doLogout(){
@@ -3701,17 +3737,7 @@ async function lxInit(){
     return;
   }
 
-  // Handle redirect result from Google Sign-In
-  AUTH.getRedirectResult().then(result=>{
-    if(result&&result.user){
-      // Successfully signed in via redirect — onAuthStateChanged will handle it
-    }
-  }).catch(e=>{
-    if(e&&e.code){
-      const err=document.getElementById('lx-err');
-      if(err)err.textContent='Google error: '+e.code+' — '+e.message;
-    }
-  });
+  // No redirect result needed — using GIS credential flow instead
 
   AUTH.onAuthStateChanged(async(user)=>{
     if(user){
