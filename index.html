@@ -3280,21 +3280,12 @@ function doGoogleLogin(){
   const err=document.getElementById('lx-err');
   err.textContent='';
   if(typeof google==='undefined'||!google.accounts){
-    err.textContent='Google Sign-In not ready — please wait a moment and try again.';
+    // GIS not loaded yet — retry once after a short delay
+    err.textContent='Connecting to Google...';
+    setTimeout(()=>{err.textContent='';doGoogleLogin();},1500);
     return;
   }
-  // Try FedCM / One Tap first (works in managed Chrome, no popup needed)
-  google.accounts.id.initialize({
-    client_id:'227872646687-e25n9vf0r8q79kgjkhruh57eslvhlkhm.apps.googleusercontent.com',
-    callback:_handleGoogleIdToken,
-    use_fedcm_for_prompt:true
-  });
-  google.accounts.id.prompt(notification=>{
-    if(notification.isNotDisplayed()||notification.isSkippedMoment()){
-      // FedCM not available — fall back to OAuth token client (may open popup)
-      _googleTokenClientLogin();
-    }
-  });
+  _googleTokenClientLogin();
 }
 async function _handleGoogleIdToken(response){
   const err=document.getElementById('lx-err');
