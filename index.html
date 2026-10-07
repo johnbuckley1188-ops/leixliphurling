@@ -3757,7 +3757,8 @@ async function lxInit(){
       }catch(e){
         const loading=document.getElementById('ao-loading');if(loading)loading.style.display='none';
         _lxShowLogin();
-        const err=document.getElementById('lx-err');if(err)err.textContent='Error loading account — please try again.';
+        const errMsg=(e&&e.code)?e.code+': '+e.message:(e&&e.message?e.message:'Unknown error');
+        const err=document.getElementById('lx-err');if(err)err.textContent='Login error: '+errMsg;
         AUTH.signOut();
       }
     }else{
