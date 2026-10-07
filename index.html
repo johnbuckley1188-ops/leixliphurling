@@ -360,7 +360,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .auth-bg-dots{position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(circle,rgba(91,141,239,.13) 1px,transparent 1px);background-size:26px 26px}
 .auth-card{background:#0D1A30;border:1px solid rgba(100,130,200,.2);border-radius:12px;padding:28px 32px;width:min(360px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.6);position:relative;z-index:1}
 .auth-card.wide{width:min(420px,96vw);max-height:90vh;overflow-y:auto}
-.auth-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;letter-spacing:3px;color:#D4A820;text-align:center;margin-bottom:3px}
+.auth-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;letter-spacing:3px;color:var(--accent);text-align:center;margin-bottom:3px}
 .auth-logo em{font-style:normal;color:#5B8DEF}
 .auth-sport{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2.5px;color:#4A6080;text-align:center;margin-bottom:22px;text-transform:uppercase}
 .auth-section-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;color:#4A6080;text-transform:uppercase;text-align:center;margin-bottom:14px}
@@ -368,7 +368,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .auth-inp,.auth-sel{width:100%;background:#080E20;border:1px solid rgba(100,130,200,.22);border-radius:6px;color:#E2E8F5;font-family:'Barlow',sans-serif;font-size:15px;padding:10px 12px;margin-bottom:13px;outline:none;transition:border-color .15s;-webkit-appearance:none}
 .auth-inp:focus,.auth-sel:focus{border-color:#D4A820}
 .auth-sel option{background:#080E20}
-.auth-btn{width:100%;background:#D4A820;border:none;border-radius:6px;color:#070C1A;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:2px;padding:12px;cursor:pointer;transition:background .15s;margin-top:2px}
+.auth-btn{width:100%;background:var(--accent);border:none;border-radius:6px;color:#070C1A;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:2px;padding:12px;cursor:pointer;transition:background .15s;margin-top:2px}
 .auth-btn:hover{background:#E8C030}
 .auth-btn.sec{background:transparent;border:1px solid rgba(100,130,200,.22);color:#5A7090;margin-top:8px}
 .auth-btn.sec:hover{border-color:#5B8DEF;color:#90B0D8}
@@ -509,11 +509,11 @@ html[data-theme="light"] .cmp-section-title{border-radius:6px}
 <div id="auth-overlay">
   <div class="auth-bg-dots"></div>
   <div id="ao-loading" class="auth-card" style="text-align:center">
-    <div class="auth-logo">LEIXLIP <em>HURLING</em></div>
+    <div class="auth-logo" id="ao-logo-loading">LEIXLIP HURLING</div>
     <div class="auth-spin"></div>
   </div>
   <div id="ao-login" class="auth-card" style="display:none">
-    <div class="auth-logo" style="font-size:22px;margin-bottom:6px">LEIXLIP <em>HURLING</em></div>
+    <div class="auth-logo" style="font-size:22px;margin-bottom:6px" id="ao-logo-login">LEIXLIP HURLING</div>
     <div class="auth-sport" style="margin-bottom:24px">GAA ANALYTICS</div>
     <label class="auth-lbl">Email</label>
     <input id="lx-email" class="auth-inp" type="email" autocomplete="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('lx-pw').focus()">
@@ -755,7 +755,21 @@ const TEAM_CONFIG={
   name:'Leixlip Hurling',        // Displayed in sidebar and page title
   sport:'hurling',               // 'hurling' or 'football'
   configKey:'leixlip_config',    // Firestore key for this team's config/data
+  primaryColor:'#5B8DEF',        // Accent colour (hex)
+  primaryColorRgb:'91,141,239',  // Same colour as RGB components
 };
+// Apply team identity immediately (before Firebase loads)
+(function(){
+  var c=TEAM_CONFIG;
+  document.title=c.name;
+  document.documentElement.style.setProperty('--accent',c.primaryColor||'#5B8DEF');
+  document.documentElement.style.setProperty('--accent-rgb',c.primaryColorRgb||'91,141,239');
+  document.documentElement.style.setProperty('--sb-accent-dim','rgba('+c.primaryColorRgb+',0.10)');
+  var n=c.name.toUpperCase();
+  ['ao-logo-loading','ao-logo-login','sb-club-name'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.textContent=n;
+  });
+}());
 /* ── STATE ─────────────────────────────────────────────────────────────── */
 let games=[], teams=[], teamColors={}, currentViewTeam=0, currentTab='home', currentSport=TEAM_CONFIG.sport, selectedGames=new Set(), oppositionTeamNames=[];
 let _aoSample=null;
@@ -3203,8 +3217,8 @@ async function _saveGameToDB(name,rows,uploadedAt){
   }
   const data={name,rowsZ:compressed,rowCount:rows.length,uploadedAt:uploadedAt||Date.now()};
   try{
-    await FIRESTORE.doc('leixlip_gamefiles/'+_safeDocId(name)).set(data);
-    const verify=await FIRESTORE.doc('leixlip_gamefiles/'+_safeDocId(name)).get();
+    await FIRESTORE.doc(`${TEAM_CONFIG.configKey}_gamefiles/${_safeDocId(name)}`).set(data);
+    const verify=await FIRESTORE.doc(`${TEAM_CONFIG.configKey}_gamefiles/${_safeDocId(name)}`).get();
     if(verify&&verify.exists){
       _showUploadBanner(name,'✓ Saved ('+rawKb+'KB → '+compKb+'KB) — coaches can now see this.','#50D080');
       return {ok:true};
@@ -3222,13 +3236,13 @@ async function _saveGameToDB(name,rows,uploadedAt){
 
 function _deleteGameFromDB(name){
   if(!FIRESTORE)return;
-  FIRESTORE.doc('leixlip_gamefiles/'+_safeDocId(name)).delete().catch(()=>{});
+  FIRESTORE.doc(`${TEAM_CONFIG.configKey}_gamefiles/${_safeDocId(name)}`).delete().catch(()=>{});
 }
 
 async function _loadGamesFromDB(){
   if(!FIRESTORE){showEmpty();return;}
   let dbDocs=[];
-  try{const snap=await FIRESTORE.collection('leixlip_gamefiles').get();dbDocs=snap.docs||[];}catch(e){}
+  try{const snap=await FIRESTORE.collection(`${TEAM_CONFIG.configKey}_gamefiles`).get();dbDocs=snap.docs||[];}catch(e){}
   if(!dbDocs.length){showEmpty();return;}
   try{
     const loaded=[];
