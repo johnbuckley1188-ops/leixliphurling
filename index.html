@@ -3702,7 +3702,16 @@ async function lxInit(){
   }
 
   // Handle redirect result from Google Sign-In
-  AUTH.getRedirectResult().catch(()=>{});
+  AUTH.getRedirectResult().then(result=>{
+    if(result&&result.user){
+      // Successfully signed in via redirect — onAuthStateChanged will handle it
+    }
+  }).catch(e=>{
+    if(e&&e.code){
+      const err=document.getElementById('lx-err');
+      if(err)err.textContent='Google error: '+e.code+' — '+e.message;
+    }
+  });
 
   AUTH.onAuthStateChanged(async(user)=>{
     if(user){
