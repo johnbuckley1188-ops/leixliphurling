@@ -502,6 +502,34 @@ html[data-theme="light"] .col-block{border-radius:10px;box-shadow:0 1px 3px rgba
 html[data-theme="light"] .trends-card{border-radius:10px}
 html[data-theme="light"] .cmp-section-title{border-radius:6px}
 </style>
+<style>
+/* ── SECTION HEADING BARS ─────────────────────────────────────────────
+   Dark mode: light bars with navy text. Light mode: navy bars with white text. */
+.cmp-section-title{background:#E9EEF6!important;color:#0B1A3A!important;border-top:none!important;border-bottom:none!important;border-left:4px solid var(--accent)!important;margin:6px 0 2px!important;padding:5px 4px 4px!important}
+.col-hd{background:#E9EEF6;color:#0B1A3A;border-bottom:3px solid var(--accent)}
+.col-hd.col-hd-teams{background:#0D1A3A;border-bottom:3px solid var(--accent)}
+.col-hd.col-hd-teams .col-hd-half{color:#FFFFFF!important}
+.zone-tbl th,.shot-tbl th{background:rgba(233,238,246,.10);color:#C9D5E8}
+html[data-theme="light"] .cmp-section-title{background:#13254D!important;color:#FFFFFF!important;border-radius:4px}
+html[data-theme="light"] .col-hd{background:#13254D;color:#FFFFFF;border-bottom-color:var(--accent)}
+html[data-theme="light"] .col-hd.col-hd-teams{background:#13254D}
+/* Light mode tables: white body, dark header bar */
+html[data-theme="light"] .zone-tbl,html[data-theme="light"] .shot-tbl{background:#FFFFFF}
+html[data-theme="light"] .zone-tbl th,html[data-theme="light"] .shot-tbl th{background:#13254D;color:#FFFFFF;border-bottom-color:#13254D}
+html[data-theme="light"] .zone-tbl tbody tr:nth-child(even) td,html[data-theme="light"] .shot-tbl tbody tr:nth-child(even) td{background:#F5F7FA}
+html[data-theme="light"] .po-hdr{background:#FFFFFF;border-top:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.06)}
+/* Light mode: keep the match banner as a dark bar so team colours (incl. grey opposition) stay readable */
+html[data-theme="light"] .match-banner{background:#13254D!important}
+html[data-theme="light"] .mb-name{color:inherit}
+.mb-total{color:#FFFFFF}
+.cmp-poss-val{color:#E2E8F5}
+html[data-theme="light"] .cmp-poss-val{color:#1A2030}
+html[data-theme="light"] .mb-gp-val,html[data-theme="light"] .mb-total{color:#FFFFFF}
+html[data-theme="light"] .mb-gp-lbl{color:#9FB0D0}
+html[data-theme="light"] .mb-vsep{color:#5A6E94}
+html[data-theme="light"] .mb-page-title{color:#FFFFFF}
+html[data-theme="light"] .mb-title-block{border-left-color:rgba(255,255,255,.2)}
+</style>
 </head>
 <body>
 <script>(function(){var t=localStorage.getItem('lx_theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}());</script>
@@ -779,7 +807,63 @@ let gameFilterType='all'; // 'all' | 'last' | 'range' | 'manual'
 let pitchViewMode={puckouts:'dots',shooting:'dots',turnovers:'dots'};
 let momentumMarkerStyle='dots'; // 'dots' | 'flags'
 let _momData=null; // cached {evs,maxT,halfT,maxM,c0,c1} for TIME STATS tab
-const T_COLORS=['#C8334A','#2C6CB8'];
+const OPP_DEFAULT_COLOR='#CCCCCC';
+const T_COLORS=[TEAM_CONFIG.primaryColor||'#5B8DEF',OPP_DEFAULT_COLOR];
+/* ── PERSISTENT TEAM COLOURS ─────────────────────────────────────────────
+   Two slots: home (this club) and opposition (every opponent).
+   Saved in this browser and, for admins, in Firestore so it is the same
+   for everyone and on every device. */
+const _TC_KEY=TEAM_CONFIG.configKey+'_team_colors';
+let _savedColors=(function(){try{return JSON.parse(localStorage.getItem(_TC_KEY)||'{}')||{};}catch(e){return {};}})();
+function _homeColor(){return _savedColors.home||TEAM_CONFIG.primaryColor||'#5B8DEF';}
+function _oppColor(){return _savedColors.opp||OPP_DEFAULT_COLOR;}
+function _persistColors(){
+  try{localStorage.setItem(_TC_KEY,JSON.stringify(_savedColors));}catch(e){}
+  if(window._aoIsAdmin&&typeof FIRESTORE!=='undefined'&&FIRESTORE){
+    FIRESTORE.doc(`${TEAM_CONFIG.configKey}/display`).set({teamColors:{home:_savedColors.home||null,opp:_savedColors.opp||null}},{merge:true}).catch(()=>{});
+  }
+}
+async function _loadColorsFromCloud(){
+  try{
+    const snap=await FIRESTORE.doc(`${TEAM_CONFIG.configKey}/display`).get();
+    const tc=snap.exists&&snap.data().teamColors;
+    if(tc){
+      if(tc.home)_savedColors.home=tc.home;
+      if(tc.opp)_savedColors.opp=tc.opp;
+      try{localStorage.setItem(_TC_KEY,JSON.stringify(_savedColors));}catch(e){}
+    }
+  }catch(e){}
+}
+// Which index in `teams` is this club? Opposition label wins, then a name match, else index 0.
+function _homeIdx(list){
+  list=list||teams;
+  if(list.length<2)return 0;
+  if(list[0]==='Opposition')return 1;
+  if(list[1]==='Opposition')return 0;
+  if(_savedColors.homeName){const i=list.indexOf(_savedColors.homeName);if(i>=0)return i;}
+  const hint=(TEAM_CONFIG.name.split(/\s+/)[0]||'').toLowerCase();
+  if(hint){const i=list.findIndex(t=>(t||'').toLowerCase().includes(hint));if(i>=0)return i;}
+  return 0;
+}
+// In light mode, darken any team colour too pale to read on white (e.g. grey/silver, gold).
+function _readableOnWhite(hex){
+  if(!/^#[0-9a-f]{6}$/i.test(hex))return hex;
+  let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const lum=(r,g,b)=>{const f=v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);};return .2126*f(r)+.7152*f(g)+.0722*f(b);};
+  let k=1;
+  while(1.05/(lum(r*k,g*k,b*k)+0.05)<3.4&&k>0.05)k-=0.03;
+  const h=v=>Math.round(v*k).toString(16).padStart(2,'0');
+  return '#'+h(r)+h(g)+h(b);
+}
+// Undarkened colour, for team names sitting on dark navy bars
+function _rawTeamColor(i){return teams.length>=2?(i===_homeIdx(teams)?_homeColor():_oppColor()):T_COLORS[i];}
+function applyTeamColors(){
+  if(teams.length<2){teamColors={};return;}
+  const h=_homeIdx(teams);
+  const light=document.documentElement.getAttribute('data-theme')==='light';
+  teamColors={};
+  teams.forEach((t,i)=>{let c=(i===h)?_homeColor():_oppColor();if(light)c=_readableOnWhite(c);teamColors[t]=c;T_COLORS[i]=c;});
+}
 const HALVES=['h1','h2','all'];
 const HALF_LABELS=['1ST HALF','2ND HALF','FULL GAME'];
 
@@ -1019,6 +1103,10 @@ function setTeamColor(idx,hex){
   if(!teams[idx])return;
   teamColors[teams[idx]]=hex;
   T_COLORS[idx]=hex;
+  if(idx===_homeIdx(teams)){_savedColors.home=hex;_savedColors.homeName=teams[idx]==='Opposition'?_savedColors.homeName:teams[idx];}
+  else _savedColors.opp=hex;
+  _persistColors();
+  applyTeamColors();
   // Update swatch background
   const sw=document.getElementById('swatch-'+idx);
   if(sw)sw.style.background=hex;
@@ -1207,7 +1295,7 @@ function themeVal(dark,light){return isLightTheme()?light:dark;}
 function drawDonut(ctx,cx,cy,r,pct,color,bg){
   const tau=Math.PI*2,s=-Math.PI/2;
   ctx.beginPath();ctx.arc(cx,cy,r,0,tau);
-  ctx.strokeStyle=bg||'rgba(255,255,255,.08)';ctx.lineWidth=r*0.28;ctx.stroke();
+  ctx.strokeStyle=bg||(isLightTheme()?'rgba(19,37,77,.10)':'rgba(255,255,255,.08)');ctx.lineWidth=r*0.28;ctx.stroke();
   if(pct>0){
     ctx.beginPath();ctx.arc(cx,cy,r,s,s+tau*(Math.min(pct,100)/100));
     ctx.strokeStyle=color;ctx.lineWidth=r*0.28;ctx.stroke();
@@ -1350,7 +1438,7 @@ function updateSidebarTeams(rows){
     const sw=document.getElementById('swatch-'+i);
     const ci=document.getElementById('color-input-'+i);
     if(sw){sw.style.background=col;}
-    if(ci){ci.value=col.length===7?col:'#C8334A';}
+    if(ci){ci.value=col.length===7?col:'#CCCCCC';}
   });
   // Logos
   [0,1].forEach(i=>{
@@ -1388,13 +1476,13 @@ function updateMatchBanner(){
   if(!banner||!teams.length||currentTab==='home'){if(banner){banner.style.display='none';setTimeout(fixLayout,20);}return;}
   const rows=getActiveRows();
   function logoEl(t,idx){
-    const col=teamColors[t]||T_COLORS[idx];
+    const col=(teams.length>=2?(teams.indexOf(t)===_homeIdx(teams)?_homeColor():_oppColor()):null)||teamColors[t]||T_COLORS[idx];
     let stored=null;
     try{stored=localStorage.getItem('logo_'+t);}catch(e){}
     return `<div class="mb-logo" style="background:${col}">${stored?`<img src="${stored}" alt="">`:teamInitials(t)}</div>`;
   }
   function teamSide(t,idx,side){
-    const col=teamColors[t]||T_COLORS[idx];
+    const col=(teams.length>=2?(teams.indexOf(t)===_homeIdx(teams)?_homeColor():_oppColor()):null)||teamColors[t]||T_COLORS[idx];
     const s=calcScore(rows,t);
     const twoPtHtml=(currentSport==='football')?
       `<div class="mb-gp-item"><div class="mb-gp-lbl">2 PTS</div><div class="mb-gp-val">${s.twoPt}</div></div>`:'';
@@ -1428,9 +1516,9 @@ function updateMatchBanner(){
     teamSide(teams[0],0,'left')+
     `<div class="mb-center">
       <div class="mb-totals">
-        <span class="mb-total" style="color:${teamColors[teams[0]]||T_COLORS[0]}">${s0.total}</span>
+        <span class="mb-total">${s0.total}</span>
         <span class="mb-vsep">–</span>
-        <span class="mb-total" style="color:${teamColors[teams[1]]||T_COLORS[1]}">${s1.total}</span>
+        <span class="mb-total">${s1.total}</span>
       </div>
     </div>`+
     teamSide(teams[1],1,'right')+
@@ -1505,7 +1593,7 @@ function deleteStoredFile(name){
   selectedGames=new Set([...selectedGames].filter(i=>i<games.length));
   if(!games.length){teams=[];teamColors={};currentViewTeam=0;document.getElementById('sb-teams-section').style.display='none';}
   else if(!teams.length||!teams[0]){
-    for(const g of games){const t=detectTeams(g.rows);if(t.length>=2){teams=t;teamColors={[teams[0]]:T_COLORS[0],[teams[1]]:T_COLORS[1]};break;}}
+    for(const g of games){const t=detectTeams(g.rows);if(t.length>=2){teams=t;applyTeamColors();break;}}
   }
   updateStoredFilesList(games);
   applySelectionAndRender();
@@ -1546,10 +1634,9 @@ function applySelectionAndRender(){
     }
   }
   if(homeTeam){
-    const prevColor0=teamColors[homeTeam]||teamColors[teams[0]]||T_COLORS[0];
-    const prevColor1=teamColors['Opposition']||teamColors[teams[1]]||T_COLORS[1];
     teams=[homeTeam,'Opposition'];
-    teamColors={[homeTeam]:prevColor0,'Opposition':prevColor1};
+    _savedColors.homeName=homeTeam;
+    applyTeamColors();
     currentViewTeam=0;
     document.getElementById('sb-teams-section').style.display='';
     // Build definitive list of opposition team names from each active game
@@ -1561,7 +1648,7 @@ function applySelectionAndRender(){
     const newTeams=detectTeams(activeRows);
     if(newTeams.length>=2){
       teams=newTeams;
-      teamColors={[teams[0]]:teamColors[newTeams[0]]||T_COLORS[0],[teams[1]]:teamColors[newTeams[1]]||T_COLORS[1]};
+      applyTeamColors();
       currentViewTeam=0;
       document.getElementById('sb-teams-section').style.display='';
     }
@@ -1749,9 +1836,9 @@ function renderMomentum(){
     return`<div style="display:flex;align-items:center;gap:10px;padding:2px 0 5px;flex-shrink:0">
       <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:2px;color:${themeVal('#4A5F88','#6B7280')};text-transform:uppercase;white-space:nowrap">${label}</span>
       <span style="flex:1;height:1px;background:${themeVal('rgba(100,130,200,.15)','rgba(0,0,0,.1)')}"></span>
-      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;color:${c0}">${teams[0]}&nbsp;${fmtGS(g[0],p[0])}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px"><span style="color:${c0}">${teams[0]}</span>&nbsp;<span style="color:${themeVal('#E2E8F5','#1A2030')}">${fmtGS(g[0],p[0])}</span></span>
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:${themeVal('#3A5070','#9CA3AF')};margin:0 2px">–</span>
-      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px;color:${c1}">${fmtGS(g[1],p[1])}&nbsp;${teams[1]}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:15px"><span style="color:${themeVal('#E2E8F5','#1A2030')}">${fmtGS(g[1],p[1])}</span>&nbsp;<span style="color:${c1}">${teams[1]}</span></span>
     </div>`;
   }
   panel.innerHTML=`<div class="print-hdr" id="ph-momentum"></div>
@@ -1851,9 +1938,9 @@ function renderMomStats(){
     const[g,p,w,fc]=pscore(tLo,tHi);
     const tbl=document.getElementById('mst-stats-tbl');if(!tbl)return;
     const row=(lbl,v0,v1,hl)=>`<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 0;border-bottom:1px solid ${themeVal('rgba(100,130,200,.1)','rgba(0,0,0,.07)')}${hl?`;background:${themeVal('rgba(80,110,180,.08)','rgba(0,0,0,.04)')}`:''}">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${hl?'32':'26'}px;color:${c0};text-align:right;padding-right:16px">${v0}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${hl?'32':'26'}px;color:${themeVal('#E2E8F5','#1A2030')};text-align:right;padding-right:16px">${v0}</span>
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;color:${themeVal('#7A94BA','#6B7280')};text-transform:uppercase;text-align:center;white-space:nowrap;min-width:110px">${lbl}</span>
-      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${hl?'32':'26'}px;color:${c1};text-align:left;padding-left:16px">${v1}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${hl?'32':'26'}px;color:${themeVal('#E2E8F5','#1A2030')};text-align:left;padding-left:16px">${v1}</span>
     </div>`;
     tbl.innerHTML=`<div style="background:${themeVal('rgba(12,22,44,.7)','rgba(240,244,250,.9)')};border:1px solid ${themeVal('rgba(80,110,180,.25)','rgba(0,0,0,.1)')};border-radius:10px;overflow:hidden">
       <div style="display:grid;grid-template-columns:1fr auto 1fr;padding:12px 0 10px;background:${themeVal('rgba(8,16,36,.6)','rgba(230,234,242,.9)')}">
@@ -2077,9 +2164,9 @@ function renderTeamStats(){
     const p1=s1.posPct,p2=100-p1;
     function cmpRow(lbl,v1,v2,c1o,c2o){
       return `<div class="cmp-row">
-        <span class="cmp-l"${c1o?` style="color:${c1o}"`:''}>${v1}</span>
+        <span class="cmp-l">${v1}</span>
         <span class="cmp-m">${lbl}</span>
-        <span class="cmp-r"${c2o?` style="color:${c2o}"`:''}>${v2}</span>
+        <span class="cmp-r">${v2}</span>
       </div>`;
     }
     const hasBip=(s1.bipSecs>0||s2.bipSecs>0);
@@ -2102,7 +2189,7 @@ function renderTeamStats(){
     return `
       <div class="cmp-section-title">POSSESSION</div>
       <div class="cmp-poss-wrap">
-        <div class="cmp-poss-vals"><span class="cmp-poss-val" style="color:${c1}">${p1}%</span><span class="cmp-poss-val" style="color:${c2}">${p2}%</span></div>
+        <div class="cmp-poss-vals"><span class="cmp-poss-val">${p1}%</span><span class="cmp-poss-val">${p2}%</span></div>
         <div class="cmp-poss-bar"><div style="flex:${p1};background:${c1}"></div><div style="flex:${p2};background:${c2}"></div></div>
       </div>
       ${bipRow}
@@ -2134,10 +2221,10 @@ function renderTeamStats(){
     `;
   }
 
-  const colHdTeam=(halfLabel)=>`<div class="col-hd" style="display:flex;align-items:center;padding:10px 14px 9px">
-    <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:${c1};letter-spacing:.5px;flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teams[0]}</span>
-    <span style="font-size:12px;letter-spacing:3px;color:#8CA4C4;padding:0 12px;flex-shrink:0;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:700">${halfLabel}</span>
-    <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:${c2};letter-spacing:.5px;flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teams[1]}</span>
+  const colHdTeam=(halfLabel)=>`<div class="col-hd col-hd-teams" style="display:flex;align-items:center;padding:10px 14px 9px">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:${_rawTeamColor(0)};letter-spacing:.5px;flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teams[0]}</span>
+    <span class="col-hd-half" style="font-size:12px;letter-spacing:3px;color:#8CA4C4;padding:0 12px;flex-shrink:0;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:700">${halfLabel}</span>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;color:${_rawTeamColor(1)};letter-spacing:.5px;flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teams[1]}</span>
   </div>`;
   panel.innerHTML=`<div class="print-hdr" id="ph-teamstats"></div>`+
     `<div class="three-col">${HALVES.map((h,i)=>`<div class="col-block">${colHdTeam(HALF_LABELS[i])}${colHTML(h)}</div>`).join('')}</div>`;
@@ -2644,7 +2731,6 @@ function swapTeams(){
   if(teams.length<2)return;
   [teams[0],teams[1]]=[teams[1],teams[0]];
   [T_COLORS[0],T_COLORS[1]]=[T_COLORS[1],T_COLORS[0]];
-  teamColors={[teams[0]]:T_COLORS[0],[teams[1]]:T_COLORS[1]};
   currentViewTeam=0;
   updateMatchBanner();
   renderAll();
@@ -3266,7 +3352,7 @@ async function _loadGamesFromDB(){
       });
       for(const g of games){
         const t=detectTeams(g.rows);
-        if(t.length>=2){teams=t;teamColors={[teams[0]]:T_COLORS[0],[teams[1]]:T_COLORS[1]};break;}
+        if(t.length>=2){teams=t;applyTeamColors();break;}
       }
       updateStoredFilesList(games);
       applySelectionAndRender();
@@ -3795,7 +3881,8 @@ async function lxInit(){
         if(ov){ov.classList.add('ao-fade');setTimeout(()=>{ov.style.display='none';},400);}
         // Handle Dropbox OAuth callback
         if(window.location.search.includes('code='))await dbxHandleOAuthCallback();
-        // Load games
+        // Load saved team colours, then games
+        await _loadColorsFromCloud();
         await _loadGamesFromDB();
         renderHome();
       }catch(e){
@@ -3823,6 +3910,7 @@ function toggleTheme(){
   else{html.removeAttribute('data-theme');}
   try{localStorage.setItem('lx_theme',next);}catch(e){}
   _applyThemeBtn();
+  if(teams.length>=2){applyTeamColors();try{updateSidebarTeams(getActiveRows());}catch(e){}updateMatchBanner();renderAll();}
 }
 function _applyThemeBtn(){
   const btn=document.getElementById('theme-toggle-btn');
